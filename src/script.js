@@ -21,13 +21,6 @@ class App {
         this.loadEventsFromLocalStorage();
     }
 
-    loadDom() {
-        // ... (le code pour loadDom reste inchangé)
-    }
-
-    initMap() {
-        // ... (le code pour initMap reste inchangé)
-    }
 
     handleClickMap(event) {
         const { lng, lat } = event.lngLat;

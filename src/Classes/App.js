@@ -89,8 +89,8 @@ class App {
         this.map.addControl(nav, 'top-left');
         this.map.on('click', this.handleClickMap.bind(this));
 
-        // Ajout du bouton de mise à jour
-        this.map.addControl(new mapboxgl.NavigationControl(), 'top-left');
+        // Ajout du contrôle personnalisé de mise à jour
+        this.map.addControl(new UpdateControl(this), 'top-left');
     }
 
     handleClickMap(event) {
@@ -112,8 +112,8 @@ class App {
             description: document.getElementById('description').value,
             startDate: document.getElementById('startDate').value,
             endDate: document.getElementById('endDate').value,
-            latitude: parseFloat(document.getElementById('latitude').value),
-            longitude: parseFloat(document.getElementById('longitude').value)
+            latitude: document.getElementById('latitude').value,
+            longitude: document.getElementById('longitude').value
         };
 
         // Récupérer les données existantes du localStorage
@@ -155,16 +155,56 @@ class App {
         const markerColor = this.getMarkerColor(eventData.startDate);
         const marker = new mapboxgl.Marker({ color: markerColor })
             .setLngLat([eventData.longitude, eventData.latitude])
-            .setPopup(new mapboxgl.Popup({ offset: 25 })
-                .setHTML(`<h3>${eventData.title}</h3><p>${eventData.description}</p><p>Début: ${eventData.startDate}</p><p>Fin: ${eventData.endDate}</p>`))
             .addTo(this.map);
 
+        // Créer une popup détaillée
+        const popup = new mapboxgl.Popup({
+            offset: 25,
+            closeButton: true,
+            closeOnClick: true
+        }).setHTML(this.createPopupContent(eventData));
+
+        // Ajouter un événement de clic au marqueur pour afficher la popup
+        marker.getElement().addEventListener('click', () => {
+            popup.setLngLat(marker.getLngLat()).addTo(this.map);
+        });
+
+        // Ajouter des événements pour le survol
         marker.getElement().addEventListener('mouseenter', () => {
-            marker.togglePopup();
+            const hoverPopup = new mapboxgl.Popup({ offset: 25 })
+                .setLngLat(marker.getLngLat())
+                .setHTML(`<h3>${eventData.title}</h3><p>Début: ${this.formatDate(eventData.startDate)}</p><p>Fin: ${this.formatDate(eventData.endDate)}</p>`)
+                .addTo(this.map);
+            marker.setPopup(hoverPopup);
         });
+
         marker.getElement().addEventListener('mouseleave', () => {
-            marker.togglePopup();
+            if (marker.getPopup()) marker.getPopup().remove();
         });
+
+        // Fermer la popup détaillée en cliquant ailleurs sur la carte
+        this.map.on('click', (e) => {
+            if (e.originalEvent.target.classList.contains('mapboxgl-marker')) return;
+            popup.remove();
+        });
+    }
+
+    createPopupContent(eventData) {
+        return `
+            <div class="popup-content">
+                <h3>${eventData.title}</h3>
+                <p><strong>Description:</strong> ${eventData.description}</p>
+                <p><strong>Début:</strong> ${this.formatDate(eventData.startDate)}</p>
+                <p><strong>Fin:</strong> ${this.formatDate(eventData.endDate)}</p>
+                <p><strong>Latitude:</strong> ${eventData.latitude}</p>
+                <p><strong>Longitude:</strong> ${eventData.longitude}</p>
+            </div>
+        `;
+    }
+
+    formatDate(dateString) {
+        const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+        return new Date(dateString).toLocaleDateString('fr-FR', options);
     }
 
     getMarkerColor(startDate) {
@@ -176,7 +216,27 @@ class App {
         if (diffDays >= 0) return 'orange';
         return 'red';
     }
-    
+}
+
+// Classe de contrôle personnalisé pour la mise à jour
+class UpdateControl {
+    constructor(app) {
+        this.app = app;
+    }
+
+    onAdd(map) {
+        this._map = map;
+        this._container = document.createElement('div');
+        this._container.className = 'mapboxgl-ctrl';
+        this._container.innerHTML = '<button class="btn btn-info"><i class="bi bi-arrow-clockwise"></i> Mettre à jour</button>';
+        this._container.onclick = () => this.app.updateMarkers();
+        return this._container;
+    }
+
+    onRemove() {
+        this._container.parentNode.removeChild(this._container);
+        this._map = undefined;
+    }
 }
 
 const app = new App();
