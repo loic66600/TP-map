@@ -2,44 +2,46 @@ import mapboxgl from 'mapbox-gl';
 
 class MapManager {
     constructor(config) {
-        this.config = config;
-        this.markers = [];
+        this.config = config; // Configuration de la carte
+        this.markers = []; // Tableau pour stocker les marqueurs
     }
 
+    // Initialisation de la carte
     initMap() {
-        mapboxgl.accessToken = this.config.apiKey;
+        mapboxgl.accessToken = this.config.apiKey; // Clé d'API Mapbox
         this.map = new mapboxgl.Map({
-            container: 'map',
-            style: this.config.map_styles.satellite_streets,
-            center: [2.79, 42.68],
-            zoom: 12
+            container: 'map', // ID de l'élément conteneur
+            style: this.config.map_styles.satellite_streets, // Style de la carte
+            center: [2.79, 42.68], // Centre de la carte
+            zoom: 12 // Niveau de zoom initial
         });
 
+        // Ajout du contrôle de navigation (zoom, rotation)
         const nav = new mapboxgl.NavigationControl();
         this.map.addControl(nav, 'top-left');
     }
 
+    // Ajout d'un marqueur pour un événement
     addEventMarker(eventData) {
-        const markerColor = this.getMarkerColor(eventData.startDate);
+        const markerColor = this.getMarkerColor(eventData.startDate); // Couleur du marqueur en fonction de la date de début
         const marker = new mapboxgl.Marker({ color: markerColor })
-            .setLngLat([eventData.longitude, eventData.latitude])
-            .addTo(this.map);
+            .setLngLat([eventData.longitude, eventData.latitude]) // Position du marqueur
+            .addTo(this.map); // Ajout du marqueur à la carte
 
-        // Créer une popup détaillée
+        // Création d'une popup détaillée
         const popup = new mapboxgl.Popup({ closeOnClick: false, closeButton: true, className: 'custom-popup' })
-            .setLngLat([eventData.longitude, eventData.latitude])
-            .setHTML(this.createPopupContent(eventData))
-            .addTo(this.map);
+            .setLngLat([eventData.longitude, eventData.latitude]) // Position de la popup
+            .setHTML(this.createPopupContent(eventData)); // Contenu HTML de la popup
 
-        // Ajouter un événement de clic au marqueur pour afficher la popup
+        // Ajout d'un événement de clic au marqueur pour afficher la popup
         marker.getElement().addEventListener('click', () => {
             popup.addTo(this.map);
         });
 
-        // Ajouter des événements pour le survol
+        // Ajout d'événements pour le survol
         marker.getElement().addEventListener('mouseenter', () => {
             const hoverPopup = new mapboxgl.Popup({ offset: 25 })
-                .setLngLat(marker.getLngLat())
+                .setLngLat(marker.getLngLat()) // Position de la popup de survol
                 .setHTML(`<h3>${eventData.title}</h3><p>Début: ${this.formatDate(eventData.startDate)}</p><p>Fin: ${this.formatDate(eventData.endDate)}</p>`)
                 .addTo(this.map);
             marker.setPopup(hoverPopup);
@@ -49,11 +51,13 @@ class MapManager {
             if (marker.getPopup()) marker.getPopup().remove();
         });
 
+        // Stockage du marqueur et des données de l'événement
         this.markers.push({ marker, eventData });
     }
 
+    // Création du contenu HTML pour la popup
     createPopupContent(eventData) {
-        const eventStatus = this.getEventStatus(eventData.startDate);
+        const eventStatus = this.getEventStatus(eventData.startDate); // Statut de l'événement
         return `
             <div class="popup-content">
                 <h3>${eventData.title}</h3>
@@ -69,6 +73,7 @@ class MapManager {
         `;
     }
 
+    // Calcul du statut de l'événement en fonction de la date de début
     getEventStatus(startDate) {
         const eventDate = new Date(startDate);
         const currentDate = new Date();
@@ -95,26 +100,30 @@ class MapManager {
         }
     }
 
+    // Formatage de la date pour l'affichage
     formatDate(dateString) {
         const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
         return new Date(dateString).toLocaleDateString('fr-FR', options);
     }
 
+    // Détermination de la couleur du marqueur en fonction de la date de début
     getMarkerColor(startDate) {
         const eventDate = new Date(startDate);
         const currentDate = new Date();
         const diffHours = (eventDate - currentDate) / (1000 * 60 * 60);
 
-        if (diffHours > 72) return 'green';
-        if (diffHours > 0) return 'orange';
-        return 'red';
+        if (diffHours > 72) return 'green'; // Plus de 72 heures
+        if (diffHours > 0) return 'orange'; // Entre 0 et 72 heures
+        return 'red'; // Passé
     }
 
+    // Suppression de tous les marqueurs de la carte
     clearMarkers() {
         this.markers.forEach(({ marker }) => marker.remove());
         this.markers = [];
     }
 
+    // Mise à jour des marqueurs (suppression et recréation)
     updateMarkers() {
         this.clearMarkers();
         this.markers.forEach(({ eventData }) => this.addEventMarker(eventData));

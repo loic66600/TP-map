@@ -1,3 +1,4 @@
+// Importation des configurations et des librairies nécessaires
 import config from '../app.config.json';
 import mapboxgl from 'mapbox-gl';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -9,24 +10,25 @@ import EventManager from './EventManager.js';
 import MapManager from './MapManager.js';
 
 class App {
-    //properties
-    elDivMap;
-    elDivSidebar;
-    mapManager;
-    eventManager;
+    // Propriétés de la classe
+    elDivMap; // Élément div pour la carte
+    elDivSidebar; // Élément div pour la barre latérale
+    mapManager; // Instance de MapManager
+    eventManager; // Instance de EventManager
 
     constructor() {
+        // Initialisation des instances de EventManager et MapManager
         this.eventManager = new EventManager();
         this.mapManager = new MapManager(config.api.mapbox_gl);
     }
 
     start() {
         console.log("App started");
-        this.loadDom();
-        this.mapManager.initMap();
-        this.initForm();
-        this.eventManager.loadEventsFromLocalStorage();
-        this.eventManager.events.forEach(event => this.mapManager.addEventMarker(event));
+        this.loadDom(); // Chargement du DOM
+        this.mapManager.initMap(); // Initialisation de la carte
+        this.initForm(); // Initialisation du formulaire
+        this.eventManager.loadEventsFromLocalStorage(); // Chargement des événements depuis le localStorage
+        this.eventManager.events.forEach(event => this.mapManager.addEventMarker(event)); // Ajout des marqueurs pour chaque événement
         this.mapManager.map.on('click', this.handleClickMap.bind(this)); // Ajout du gestionnaire d'événements pour le clic sur la carte
 
         // Ajout du contrôle personnalisé de mise à jour
@@ -35,7 +37,7 @@ class App {
 
     loadDom() {
         const app = document.getElementById("app");
-        app.innerHTML = '';
+        app.innerHTML = ''; // Réinitialisation du contenu de l'élément app
 
         // Création de la div pour la carte
         this.elDivMap = document.createElement("div");
@@ -44,7 +46,7 @@ class App {
         this.elDivMap.style.height = "100vh";
         this.elDivMap.style.float = "left";
 
-        // Création de la sidebar pour le formulaire
+        // Création de la barre latérale pour le formulaire
         this.elDivSidebar = document.createElement("div");
         this.elDivSidebar.id = "sidebar";
         this.elDivSidebar.style.width = "25%";
@@ -53,6 +55,7 @@ class App {
         this.elDivSidebar.style.padding = "20px";
         this.elDivSidebar.style.overflowY = "auto";
 
+        // Contenu HTML de la barre latérale
         this.elDivSidebar.innerHTML = `
             <h2>Créer un Événement</h2>
             <form id="eventForm">
@@ -85,53 +88,58 @@ class App {
             <button id="clear-storage-btn" class="btn btn-danger mt-3">Supprimer les données</button>
         `;
 
+        // Ajout des éléments div au DOM
         app.appendChild(this.elDivMap);
         app.appendChild(this.elDivSidebar);
     }
 
     initForm() {
+        // Ajout des gestionnaires d'événements pour le formulaire et le bouton de suppression
         document.getElementById('eventForm').addEventListener('submit', this.handleFormSubmit.bind(this));
         document.getElementById('clear-storage-btn').addEventListener('click', this.clearLocalStorage.bind(this));
     }
 
     handleFormSubmit(event) {
-        event.preventDefault();
+        event.preventDefault(); // Empêche le rechargement de la page
         
-        const eventData = this.eventManager.createEventFromForm();
-        this.eventManager.addEvent(eventData);
+        const eventData = this.eventManager.createEventFromForm(); // Création d'un événement à partir du formulaire
+        this.eventManager.addEvent(eventData); // Ajout de l'événement au gestionnaire d'événements
 
         alert('Les données de l\'événement ont été sauvegardées dans le localStorage.');
 
-        // Réinitialiser le formulaire
+        // Réinitialisation du formulaire
         event.target.reset();
 
-        // Mettre à jour la carte
+        // Ajout du marqueur sur la carte
         this.mapManager.addEventMarker(eventData);
     }
 
     handleClickMap(event) {
+        // Mise à jour des champs de latitude et longitude dans le formulaire avec les coordonnées du clic
         const { lng, lat } = event.lngLat;
         document.getElementById('latitude').value = lat.toFixed(6);
         document.getElementById('longitude').value = lng.toFixed(6);
     }
 
     clearLocalStorage() {
-        // Supprimer les données du localStorage
+        // Suppression des données du localStorage
         this.eventManager.clearEvents();
 
         alert('Les données de l\'événement ont été supprimées du localStorage.');
 
-        // Réinitialiser la carte
+        // Réinitialisation de la carte
         this.mapManager.clearMarkers();
     }
 
     deleteEvent(id) {
+        // Suppression d'un événement par ID
         this.eventManager.deleteEvent(id);
         this.mapManager.clearMarkers();
         this.eventManager.events.forEach(event => this.mapManager.addEventMarker(event));
     }
 
     editEvent(id) {
+        // Modification d'un événement par ID
         const event = this.eventManager.events.find(event => event.id === id);
         if (event) {
             document.getElementById('title').value = event.title;
@@ -145,7 +153,7 @@ class App {
     }
 
     updateMarkers() {
-        location.reload();
+        location.reload(); // Rafraîchit la page
     }
 }
 
@@ -160,7 +168,7 @@ class UpdateControl {
         this._container = document.createElement('div');
         this._container.className = 'mapboxgl-ctrl';
         this._container.innerHTML = '<button class="btn btn-info"><i class="bi bi-arrow-clockwise"></i> Mettre à jour</button>';
-        this._container.onclick = () => this.app.updateMarkers();
+        this._container.onclick = () => this.app.updateMarkers(); // Appel de la méthode updateMarkers pour rafraîchir la page
         return this._container;
     }
 
@@ -170,6 +178,7 @@ class UpdateControl {
     }
 }
 
+// Création et démarrage de l'application
 const app = new App();
 app.start();
 
