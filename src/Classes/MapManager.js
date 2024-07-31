@@ -33,12 +33,12 @@ class MapManager {
             .setLngLat([eventData.longitude, eventData.latitude]) // Position de la popup
             .setHTML(this.createPopupContent(eventData)); // Contenu HTML de la popup
 
-        // Ajout d'un événement de clic au marqueur pour afficher la popup
+        // Ajouter un événement de clic au marqueur pour afficher la popup
         marker.getElement().addEventListener('click', () => {
             popup.addTo(this.map);
         });
 
-        // Ajout d'événements pour le survol
+        // Ajouter des événements pour le survol
         marker.getElement().addEventListener('mouseenter', () => {
             const hoverPopup = new mapboxgl.Popup({ offset: 25 })
                 .setLngLat(marker.getLngLat()) // Position de la popup de survol
@@ -52,7 +52,7 @@ class MapManager {
         });
 
         // Stockage du marqueur et des données de l'événement
-        this.markers.push({ marker, eventData });
+        this.markers.push({ marker, eventData, popup });
     }
 
     // Création du contenu HTML pour la popup
@@ -67,8 +67,8 @@ class MapManager {
                 <p><strong>Latitude:</strong> ${eventData.latitude}</p>
                 <p><strong>Longitude:</strong> ${eventData.longitude}</p>
                 <p class="${eventStatus.class}">${eventStatus.message}</p>
-                <button class="btn btn-danger btn-sm" onclick="app.deleteEvent('${eventData.id}')">Supprimer</button>
-                <button class="btn btn-primary btn-sm" onclick="app.editEvent('${eventData.id}')">Modifier</button>
+                <button class="btn btn-danger btn-sm" onclick="window.app.deleteEvent('${eventData.id}')">Supprimer</button>
+                <button class="btn btn-primary btn-sm" onclick="window.app.editEvent('${eventData.id}')">Modifier</button>
             </div>
         `;
     }
@@ -119,7 +119,10 @@ class MapManager {
 
     // Suppression de tous les marqueurs de la carte
     clearMarkers() {
-        this.markers.forEach(({ marker }) => marker.remove());
+        this.markers.forEach(({ marker, popup }) => {
+            marker.remove();
+            if (popup) popup.remove();
+        });
         this.markers = [];
     }
 

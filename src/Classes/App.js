@@ -15,6 +15,7 @@ class App {
     elDivSidebar; // Élément div pour la barre latérale
     mapManager; // Instance de MapManager
     eventManager; // Instance de EventManager
+    currentEditId = null; // ID de l'événement en cours de modification
 
     constructor() {
         // Initialisation des instances de EventManager et MapManager
@@ -24,17 +25,19 @@ class App {
 
     start() {
         console.log("App started");
-        this.loadDom(); // Chargement du DOM
-        this.mapManager.initMap(); // Initialisation de la carte
-        this.initForm(); // Initialisation du formulaire
-        this.eventManager.loadEventsFromLocalStorage(); // Chargement des événements depuis le localStorage
-        this.eventManager.events.forEach(event => this.mapManager.addEventMarker(event)); // Ajout des marqueurs pour chaque événement
-        this.mapManager.map.on('click', this.handleClickMap.bind(this)); // Ajout du gestionnaire d'événements pour le clic sur la carte
+        this.loadDom();
+        this.mapManager.initMap();
+        this.initForm();
+        this.eventManager.loadEventsFromLocalStorage();
+        this.eventManager.events.forEach(event => this.mapManager.addEventMarker(event));
+        this.mapManager.map.on('click', this.handleClickMap.bind(this));
 
         // Ajout du contrôle personnalisé de mise à jour
         this.mapManager.map.addControl(new UpdateControl(this), 'top-left');
-    }
 
+        // Rendre l'instance de App accessible globalement
+        window.app = this;
+    }
     loadDom() {
         const app = document.getElementById("app");
         app.innerHTML = ''; // Réinitialisation du contenu de l'élément app
@@ -102,16 +105,26 @@ class App {
     handleFormSubmit(event) {
         event.preventDefault(); // Empêche le rechargement de la page
         
-        const eventData = this.eventManager.createEventFromForm(); // Création d'un événement à partir du formulaire
-        this.eventManager.addEvent(eventData); // Ajout de l'événement au gestionnaire d'événements
+        if (this.currentEditId) {
+            // Si un événement est en cours de modification, mettre à jour les données
+            const updatedEvent = this.eventManager.createEventFromForm();
+            updatedEvent.id = this.currentEditId; // Conserver l'ID de l'événement
+            this.eventManager.updateEvent(updatedEvent);
+            this.currentEditId = null; // Réinitialiser l'ID en cours de modification
+        } else {
+            // Sinon, créer un nouvel événement
+            const eventData = this.eventManager.createEventFromForm();
+            this.eventManager.addEvent(eventData);
+        }
 
         alert('Les données de l\'événement ont été sauvegardées dans le localStorage.');
 
         // Réinitialisation du formulaire
         event.target.reset();
 
-        // Ajout du marqueur sur la carte
-        this.mapManager.addEventMarker(eventData);
+        // Mettre à jour la carte
+        this.mapManager.clearMarkers();
+        this.eventManager.events.forEach(event => this.mapManager.addEventMarker(event));
     }
 
     handleClickMap(event) {
@@ -148,7 +161,7 @@ class App {
             document.getElementById('endDate').value = event.endDate;
             document.getElementById('latitude').value = event.latitude;
             document.getElementById('longitude').value = event.longitude;
-            this.deleteEvent(id);
+            this.currentEditId = id; // Stocker l'ID de l'événement en cours de modification
         }
     }
 
