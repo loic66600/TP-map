@@ -84,7 +84,7 @@ class MapManager {
 
         if (diffDays > 3) {
             return {
-                message: `Événement dans plus de 3 jours: ${diffDays} jours et ${diffHours} heures restants`,
+                message: `Événement dans : ${diffDays} jours et ${diffHours} heures restants`,
                 class: 'status-future'
             };
         } else if (diffDays >= 0) {

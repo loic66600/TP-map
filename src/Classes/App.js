@@ -86,9 +86,14 @@ class App {
                     <label for="longitude" class="form-label">Longitude</label>
                     <input type="number" class="form-control" id="longitude" step="any" required>
                 </div>
-                <button type="submit" class="btn btn-primary">Créer l'événement</button>
+                <button type="submit" class="btn btn-primary">Créer l'événement ou modifier</button>
+                <br><br>
+                <div>
+                <button type="submit" class="btn btn-success">Valider modification</button>
+                </div>
+
             </form>
-            <button id="clear-storage-btn" class="btn btn-danger mt-3">Supprimer les données</button>
+            <button id="clear-storage-btn" class="btn btn-danger mt-3">Supprimer les Événements</button>
         `;
 
         // Ajout des éléments div au DOM
@@ -117,7 +122,7 @@ class App {
             this.eventManager.addEvent(eventData);
         }
 
-        alert('Les données de l\'événement ont été sauvegardées dans le localStorage.');
+        alert('Les données de l\'événement ont été sauvegardées .');
 
         // Réinitialisation du formulaire
         event.target.reset();
@@ -138,7 +143,7 @@ class App {
         // Suppression des données du localStorage
         this.eventManager.clearEvents();
 
-        alert('Les données de l\'événement ont été supprimées du localStorage.');
+        alert('Les données de l\'événement ont été supprimées.');
 
         // Réinitialisation de la carte
         this.mapManager.clearMarkers();
