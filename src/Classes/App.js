@@ -5,20 +5,32 @@ import 'bootstrap/dist/js/bootstrap.min.js';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import '../assets/style.css';
+import EventManager from './EventManager.js';
+import MapManager from './MapManager.js';
 
 class App {
     //properties
     elDivMap;
     elDivSidebar;
-    map;
-    events = [];
+    mapManager;
+    eventManager;
+
+    constructor() {
+        this.eventManager = new EventManager();
+        this.mapManager = new MapManager(config.api.mapbox_gl);
+    }
 
     start() {
         console.log("App started");
         this.loadDom();
-        this.initMap();
+        this.mapManager.initMap();
         this.initForm();
-        this.loadEventsFromLocalStorage();
+        this.eventManager.loadEventsFromLocalStorage();
+        this.eventManager.events.forEach(event => this.mapManager.addEventMarker(event));
+        this.mapManager.map.on('click', this.handleClickMap.bind(this)); // Ajout du gestionnaire d'événements pour le clic sur la carte
+
+        // Ajout du contrôle personnalisé de mise à jour
+        this.mapManager.map.addControl(new UpdateControl(this), 'top-left');
     }
 
     loadDom() {
@@ -77,28 +89,6 @@ class App {
         app.appendChild(this.elDivSidebar);
     }
 
-    initMap() {
-        mapboxgl.accessToken = config.api.mapbox_gl.apiKey;
-        this.map = new mapboxgl.Map({
-            container: this.elDivMap,
-            style: config.api.mapbox_gl.map_styles.satellite_streets,
-            center: [2.79, 42.68],
-            zoom: 12
-        });
-        const nav = new mapboxgl.NavigationControl();
-        this.map.addControl(nav, 'top-left');
-        this.map.on('click', this.handleClickMap.bind(this));
-
-        // Ajout du contrôle personnalisé de mise à jour
-        this.map.addControl(new UpdateControl(this), 'top-left');
-    }
-
-    handleClickMap(event) {
-        const { lng, lat } = event.lngLat;
-        document.getElementById('latitude').value = lat.toFixed(6);
-        document.getElementById('longitude').value = lng.toFixed(6);
-    }
-
     initForm() {
         document.getElementById('eventForm').addEventListener('submit', this.handleFormSubmit.bind(this));
         document.getElementById('clear-storage-btn').addEventListener('click', this.clearLocalStorage.bind(this));
@@ -107,23 +97,8 @@ class App {
     handleFormSubmit(event) {
         event.preventDefault();
         
-        const eventData = {
-            title: document.getElementById('title').value,
-            description: document.getElementById('description').value,
-            startDate: document.getElementById('startDate').value,
-            endDate: document.getElementById('endDate').value,
-            latitude: document.getElementById('latitude').value,
-            longitude: document.getElementById('longitude').value
-        };
-
-        // Récupérer les données existantes du localStorage
-        const existingData = JSON.parse(localStorage.getItem('eventDataList')) || [];
-
-        // Ajouter les nouvelles données
-        existingData.push(eventData);
-
-        // Enregistrer à nouveau les données combinées dans le localStorage
-        localStorage.setItem('eventDataList', JSON.stringify(existingData));
+        const eventData = this.eventManager.createEventFromForm();
+        this.eventManager.addEvent(eventData);
 
         alert('Les données de l\'événement ont été sauvegardées dans le localStorage.');
 
@@ -131,75 +106,46 @@ class App {
         event.target.reset();
 
         // Mettre à jour la carte
-        this.addEventMarker(eventData);
+        this.mapManager.addEventMarker(eventData);
+    }
+
+    handleClickMap(event) {
+        const { lng, lat } = event.lngLat;
+        document.getElementById('latitude').value = lat.toFixed(6);
+        document.getElementById('longitude').value = lng.toFixed(6);
     }
 
     clearLocalStorage() {
         // Supprimer les données du localStorage
-        localStorage.removeItem('eventDataList');
+        this.eventManager.clearEvents();
 
         alert('Les données de l\'événement ont été supprimées du localStorage.');
 
         // Réinitialiser la carte
-        this.map.remove();
-        this.initMap();
+        this.mapManager.clearMarkers();
     }
 
-    loadEventsFromLocalStorage() {
-        const storedEvents = JSON.parse(localStorage.getItem('eventDataList')) || [];
-        this.events = storedEvents;
-        this.events.forEach(event => this.addEventMarker(event));
+    deleteEvent(id) {
+        this.eventManager.deleteEvent(id);
+        this.mapManager.clearMarkers();
+        this.eventManager.events.forEach(event => this.mapManager.addEventMarker(event));
     }
 
-    addEventMarker(eventData) {
-        const markerColor = this.getMarkerColor(eventData.startDate);
-        const marker = new mapboxgl.Marker({ color: markerColor })
-            .setLngLat([eventData.longitude, eventData.latitude])
-            .addTo(this.map);
-
-        // Ajouter un événement de clic au marqueur pour afficher les détails dans une alerte
-        marker.getElement().addEventListener('click', () => {
-            alert(this.createAlertContent(eventData));
-        });
-
-        // Ajouter des événements pour le survol
-        marker.getElement().addEventListener('mouseenter', () => {
-            const hoverPopup = new mapboxgl.Popup({ offset: 25 })
-                .setLngLat(marker.getLngLat())
-                .setHTML(`<h3>${eventData.title}</h3><p>Début: ${this.formatDate(eventData.startDate)}</p><p>Fin: ${this.formatDate(eventData.endDate)}</p>`)
-                .addTo(this.map);
-            marker.setPopup(hoverPopup);
-        });
-
-        marker.getElement().addEventListener('mouseleave', () => {
-            if (marker.getPopup()) marker.getPopup().remove();
-        });
+    editEvent(id) {
+        const event = this.eventManager.events.find(event => event.id === id);
+        if (event) {
+            document.getElementById('title').value = event.title;
+            document.getElementById('description').value = event.description;
+            document.getElementById('startDate').value = event.startDate;
+            document.getElementById('endDate').value = event.endDate;
+            document.getElementById('latitude').value = event.latitude;
+            document.getElementById('longitude').value = event.longitude;
+            this.deleteEvent(id);
+        }
     }
 
-    createAlertContent(eventData) {
-        return `
-            Titre: ${eventData.title}
-            Description: ${eventData.description}
-            Début: ${this.formatDate(eventData.startDate)}
-            Fin: ${this.formatDate(eventData.endDate)}
-            Latitude: ${eventData.latitude}
-            Longitude: ${eventData.longitude}
-        `;
-    }
-
-    formatDate(dateString) {
-        const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-        return new Date(dateString).toLocaleDateString('fr-FR', options);
-    }
-
-    getMarkerColor(startDate) {
-        const eventDate = new Date(startDate);
-        const currentDate = new Date();
-        const diffDays = Math.ceil((eventDate - currentDate) / (1000 * 60 * 60 * 24));
-
-        if (diffDays > 3) return 'green';
-        if (diffDays >= 0) return 'orange';
-        return 'red';
+    updateMarkers() {
+        location.reload();
     }
 }
 

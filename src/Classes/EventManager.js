@@ -14,6 +14,7 @@ class EventManager {
 
     createEventFromForm() {
         return {
+            id: this.generateId(),
             title: document.getElementById('title').value,
             description: document.getElementById('description').value,
             startDate: document.getElementById('startDate').value,
@@ -23,9 +24,26 @@ class EventManager {
         };
     }
 
+    generateId() {
+        return '_' + Math.random().toString(36).substr(2, 9);
+    }
+
     addEvent(eventData) {
         this.events.push(eventData);
         this.saveEventsToLocalStorage();
+    }
+
+    deleteEvent(id) {
+        this.events = this.events.filter(event => event.id !== id);
+        this.saveEventsToLocalStorage();
+    }
+
+    updateEvent(updatedEvent) {
+        const index = this.events.findIndex(event => event.id === updatedEvent.id);
+        if (index !== -1) {
+            this.events[index] = updatedEvent;
+            this.saveEventsToLocalStorage();
+        }
     }
 
     clearEvents() {

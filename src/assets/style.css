@@ -32,3 +32,23 @@
 .btn-submit:hover {
     background-color: #0056b3;
 }
+.custom-popup .mapboxgl-popup-close-button {
+    font-size: 20px;
+    color: red;
+    font-weight: bold;
+}
+
+.status-future {
+    color: green;
+    font-weight: bold;
+}
+
+.status-soon {
+    color: orange;
+    font-weight: bold;
+}
+
+.status-past {
+    color: red;
+    font-weight: bold;
+}
