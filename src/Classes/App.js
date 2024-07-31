@@ -157,16 +157,9 @@ class App {
             .setLngLat([eventData.longitude, eventData.latitude])
             .addTo(this.map);
 
-        // Créer une popup détaillée
-        const popup = new mapboxgl.Popup({
-            offset: 25,
-            closeButton: true,
-            closeOnClick: true
-        }).setHTML(this.createPopupContent(eventData));
-
-        // Ajouter un événement de clic au marqueur pour afficher la popup
+        // Ajouter un événement de clic au marqueur pour afficher les détails dans une alerte
         marker.getElement().addEventListener('click', () => {
-            popup.setLngLat(marker.getLngLat()).addTo(this.map);
+            alert(this.createAlertContent(eventData));
         });
 
         // Ajouter des événements pour le survol
@@ -181,24 +174,16 @@ class App {
         marker.getElement().addEventListener('mouseleave', () => {
             if (marker.getPopup()) marker.getPopup().remove();
         });
-
-        // Fermer la popup détaillée en cliquant ailleurs sur la carte
-        this.map.on('click', (e) => {
-            if (e.originalEvent.target.classList.contains('mapboxgl-marker')) return;
-            popup.remove();
-        });
     }
 
-    createPopupContent(eventData) {
+    createAlertContent(eventData) {
         return `
-            <div class="popup-content">
-                <h3>${eventData.title}</h3>
-                <p><strong>Description:</strong> ${eventData.description}</p>
-                <p><strong>Début:</strong> ${this.formatDate(eventData.startDate)}</p>
-                <p><strong>Fin:</strong> ${this.formatDate(eventData.endDate)}</p>
-                <p><strong>Latitude:</strong> ${eventData.latitude}</p>
-                <p><strong>Longitude:</strong> ${eventData.longitude}</p>
-            </div>
+            Titre: ${eventData.title}
+            Description: ${eventData.description}
+            Début: ${this.formatDate(eventData.startDate)}
+            Fin: ${this.formatDate(eventData.endDate)}
+            Latitude: ${eventData.latitude}
+            Longitude: ${eventData.longitude}
         `;
     }
 
