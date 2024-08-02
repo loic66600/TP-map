@@ -52,3 +52,13 @@
     color: red;
     font-weight: bold;
 }
+#searchInput {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+#searchButton {
+    width: 100%;
+    padding: 10px;
+}

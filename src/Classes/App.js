@@ -23,7 +23,7 @@ class App {
         this.mapManager = new MapManager(config.api.mapbox_gl);
     }
 
-    start() {
+start() {
         console.log("App started");
         this.loadDom();
         this.mapManager.initMap();
@@ -31,24 +31,43 @@ class App {
         this.eventManager.loadEventsFromLocalStorage();
         this.eventManager.events.forEach(event => this.mapManager.addEventMarker(event));
         this.mapManager.map.on('click', this.handleClickMap.bind(this));
-
-        // Ajout du contrôle personnalisé de mise à jour
         this.mapManager.map.addControl(new UpdateControl(this), 'top-left');
-
-        // Rendre l'instance de App accessible globalement
         window.app = this;
-    }
-    loadDom() {
-        const app = document.getElementById("app");
-        app.innerHTML = ''; // Réinitialisation du contenu de l'élément app
 
+        // Ajouter l'écouteur d'événement pour le bouton de recherche
+        document.getElementById('searchButton').addEventListener('click', this.handleSearch.bind(this));
+    }
+
+    async handleSearch() {
+        const query = document.getElementById('searchInput').value;
+        if (!query) return;
+
+        const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${this.mapManager.config.apiKey}`);
+        const data = await response.json();
+
+        if (data.features && data.features.length > 0) {
+            const [longitude, latitude] = data.features[0].center;
+            this.mapManager.map.flyTo({ center: [longitude, latitude], zoom: 14 });
+
+            // Optionnel : Ajouter un marqueur à l'emplacement recherché
+            new mapboxgl.Marker({ color: 'blue' })
+                .setLngLat([longitude, latitude])
+                .addTo(this.mapManager.map);
+        } else {
+            alert("Aucun résultat trouvé");
+        }
+    }
+   loadDom() {
+        const app = document.getElementById("app");
+        app.innerHTML = '';
+    
         // Création de la div pour la carte
         this.elDivMap = document.createElement("div");
         this.elDivMap.id = "map";
         this.elDivMap.style.width = "75%";
         this.elDivMap.style.height = "100vh";
         this.elDivMap.style.float = "left";
-
+    
         // Création de la barre latérale pour le formulaire
         this.elDivSidebar = document.createElement("div");
         this.elDivSidebar.id = "sidebar";
@@ -57,10 +76,11 @@ class App {
         this.elDivSidebar.style.float = "right";
         this.elDivSidebar.style.padding = "20px";
         this.elDivSidebar.style.overflowY = "auto";
-
+    
         // Contenu HTML de la barre latérale
         this.elDivSidebar.innerHTML = `
-            <h2>Créer un Événement</h2>
+            <input type="text" id="searchInput" placeholder="Rechercher une adresse" class="form-control mb-2" />
+            <button id="searchButton" class="btn btn-primary mb-2">Rechercher</button>            <h2>Créer un Événement</h2>
             <form id="eventForm">
                 <div class="mb-3">
                     <label for="title" class="form-label">Titre de l'événement</label>
@@ -173,7 +193,65 @@ class App {
     updateMarkers() {
         location.reload(); // Rafraîchit la page
     }
+    async getDirections(destLng, destLat) {
+        // Demander la position de l'utilisateur
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const { longitude, latitude } = position.coords;
+            
+            // Faire une requête à l'API Directions de Mapbox
+            const response = await fetch(`https://api.mapbox.com/directions/v5/mapbox/driving/${longitude},${latitude};${destLng},${destLat}?steps=true&geometries=geojson&access_token=${this.mapManager.config.apiKey}`);
+            const data = await response.json();
+
+            if (data.routes && data.routes.length > 0) {
+                const route = data.routes[0];
+                this.displayRoute(route);
+            } else {
+                alert("Impossible de trouver un itinéraire.");
+            }
+        }, () => {
+            alert("Impossible d'obtenir votre position. Veuillez activer la géolocalisation.");
+        });
+    }
+
+    displayRoute(route) {
+        // Supprimer l'ancien itinéraire s'il existe
+        if (this.mapManager.map.getSource('route')) {
+            this.mapManager.map.removeLayer('route');
+            this.mapManager.map.removeSource('route');
+        }
+
+        // Ajouter le nouvel itinéraire à la carte
+        this.mapManager.map.addSource('route', {
+            'type': 'geojson',
+            'data': {
+                'type': 'Feature',
+                'properties': {},
+                'geometry': route.geometry
+            }
+        });
+
+        this.mapManager.map.addLayer({
+            'id': 'route',
+            'type': 'line',
+            'source': 'route',
+            'layout': {
+                'line-join': 'round',
+                'line-cap': 'round'
+            },
+            'paint': {
+                'line-color': '#3887be',
+                'line-width': 5,
+                'line-opacity': 0.75
+            }
+        });
+
+        // Ajuster la vue de la carte pour montrer l'itinéraire complet
+        const bounds = new mapboxgl.LngLatBounds();
+        route.geometry.coordinates.forEach(coord => bounds.extend(coord));
+        this.mapManager.map.fitBounds(bounds, { padding: 50 });
+    }
 }
+
 
 // Classe de contrôle personnalisé pour la mise à jour
 class UpdateControl {

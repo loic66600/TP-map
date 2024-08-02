@@ -59,6 +59,11 @@ class MapManager {
     createPopupContent(eventData) {
         const eventStatus = this.getEventStatus(eventData.startDate); // Statut de l'événement
         return `
+         <div class="popup-content">
+            <h3>${eventData.title}</h3>
+            <!-- ... (autres détails de l'événement) ... -->
+            <button class="btn btn-info btn-sm" onclick="window.app.getDirections(${eventData.longitude}, ${eventData.latitude})">Obtenir l'itinéraire</button>
+        </div>
             <div class="popup-content">
                 <h3>${eventData.title}</h3>
                 <p><strong>Description:</strong> ${eventData.description}</p>
